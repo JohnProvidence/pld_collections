@@ -1,0 +1,6 @@
+name = Prov Lib Digital Collections
+dependencies[] = islandora
+description = Overrides basic collections display
+package = Islandora
+version = 7.x
+core = 7.x

@@ -1,0 +1,118 @@
+<?php
+
+/**
+ * Helper function to map objects to their values to be used in templates.
+ *
+ * @param string $object_id
+ *   The ID of the object for which to produce a list of values.
+ *
+ * @return array
+ *   An associative array of values, including:
+ *   - label: A string containing object's label.
+ *   - class: A string containing an HTML class to add to markup representing
+ *     the object.
+ *   - link: A string containing a textual HTML link to the object.
+ *   - thumb: A string containing an image HTML link to the object.
+ *   - description: A string containing a description of the object.
+ *   - pid: The object's PID.
+ */
+function pld_collections_objects_object_mapper($object_id) {
+
+  $o = islandora_object_load($object_id);
+  $medium_size = $o->getDatastream('MEDIUM_SIZE');
+  $url = "islandora/object/{$object_id}";
+  $module_path = drupal_get_path('module', 'islandora');
+
+  $parent = arg(2);
+  $parent = islandora_object_load($parent);
+  $parent = $parent->label;
+
+   $obj_models = $o->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+   $obj_model = $obj_models[0]['object']['value'];
+
+   $no_thumb_path = drupal_get_path('theme', 'pld');
+   $no_thumb = theme('image', array('path' => "$no_thumb_path/img/ppl-pattern.png", 'alt' => $title));
+
+  if($obj_model == 'islandora:collectionCModel') {
+	  $img = array(
+	    '#theme' => 'image',
+	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
+	      "$url/datastream/TN/view" :
+	      $no_thumb_path),
+	    '#attributes' => array(),
+	  );
+  }
+  
+  if($medium_size != FALSE) {
+  	$img = array(
+	    '#theme' => 'image',
+	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
+	      "$url/datastream/MEDIUM_SIZE/view" :
+	      $no_thumb_path),
+	    '#attributes' => array(),
+	  );
+  } 
+
+ if($obj_model == 'islandora:compoundCModel') {
+      $parts = islandora_compound_object_get_parts($fc_object->id);
+      $obj_count = count($parts);
+      if($obj_count <= 0) {
+     $img = array(
+	    '#theme' => 'image',
+	    '#path' =>  $no_thumb_path,
+	    '#attributes' => array(),
+	  );
+ } else {
+    $first_child = $parts[0];
+    $img = array(
+	    '#theme' => 'image',
+	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
+	      "islandora/object/".$first_child."/datastream/MEDIUM_SIZE/view" :
+	      $no_thumb_path),
+	    '#attributes' => array(),
+	  );
+      }
+   }
+  
+  $img = drupal_render($img);
+
+
+
+  if($o) {
+  	$link_options = array('html' => TRUE, 'attributes' => array('title' => $o->label));
+  	$description = NULL;
+  	if( isset($o['DC']) && islandora_datastream_access(ISLANDOR_VIEW_OBJECTS, $o['DC'] ) ) {
+  		$dc = DublinCore::importFromXMLString($o['DC']->content);
+  		if($dc) {
+  			$dc = $dc->asArray();
+  			$description = $dc['dc:description']['value'];
+  		}
+  	}
+
+  	return array(
+  		'label' => $o->label,
+  		'class' => drupal_strtolower(preg_replace('/[^A-Za-z0-9]/', '-', $o->id)),
+  		'link' => l($o->label, $url, $link_options),
+  		'thumb' => l($img, $url, $link_options),
+  		'description' => $description,
+  		'pid' => $o->id,
+      'parent' => $parent,
+  	);
+  	
+  }
+
+
+}
+
+function pld_collections_preprocess_islandora_objects_subset(&$variables) {
+
+	$display = (empty($_GET['display'])) ? $variables['display'] : $_GET['display'];
+	$grid_display = $display == 'grid';
+	$list_display = !$grid_display;
+
+	$query_params = drupal_get_query_parameters($_GET);
+
+	$variables['content']['#objects'] = array_map('pld_collections_objects_object_mapper', $variables['content']['#objects']);
+
+}
+?>
