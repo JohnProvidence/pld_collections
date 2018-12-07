@@ -29,44 +29,54 @@ function pld_collections_objects_object_mapper($object_id) {
 
    $obj_models = $o->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
    $obj_model = $obj_models[0]['object']['value'];
+ 
 
    $no_thumb_path = drupal_get_path('theme', 'pld');
-   $no_thumb = theme('image', array('path' => "$no_thumb_path/img/ppl-pattern.png", 'alt' => $title));
+   $no_thumb_path = $no_thumb_path .'/img/ppl-pattern.png';
+   
+   $current_object = arg(2);
 
-  if($obj_model == 'islandora:collectionCModel') {
+
+  if($current_object == 'islandora:root') {
 	  $img = array(
 	    '#theme' => 'image',
 	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
 	      "$url/datastream/TN/view" :
-	      $no_thumb_path),
+	     $no_thumb_path),
 	    '#attributes' => array(),
 	  );
   }
   
   if($medium_size != FALSE) {
+
   	$img = array(
 	    '#theme' => 'image',
-	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
+	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['MEDIUM_SIZE']) ?
 	      "$url/datastream/MEDIUM_SIZE/view" :
-	      $no_thumb_path),
+	     $no_thumb_path),
 	    '#attributes' => array(),
 	  );
   } 
 
  if($obj_model == 'islandora:compoundCModel') {
-      $parts = islandora_compound_object_get_parts($fc_object->id);
+      $parts = islandora_compound_object_get_parts($o->id);
       $obj_count = count($parts);
-      if($obj_count <= 0) {
+      
+  if($obj_count <= 0) {
      $img = array(
 	    '#theme' => 'image',
 	    '#path' =>  $no_thumb_path,
 	    '#attributes' => array(),
 	  );
+
  } else {
+
     $first_child = $parts[0];
+    $child_obj = islandora_object_load($first_child);
+ 
     $img = array(
 	    '#theme' => 'image',
-	    '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['TN']) ?
+	    '#path' => ($child_obj && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $child_obj['MEDIUM_SIZE']) ?
 	      "islandora/object/".$first_child."/datastream/MEDIUM_SIZE/view" :
 	      $no_thumb_path),
 	    '#attributes' => array(),
