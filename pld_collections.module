@@ -29,7 +29,8 @@ function pld_collections_objects_object_mapper($object_id) {
 
    $obj_models = $o->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
    $obj_model = $obj_models[0]['object']['value'];
- 
+    
+
 
    $no_thumb_path = drupal_get_path('theme', 'pld');
    $no_thumb_path = $no_thumb_path .'/img/ppl-pattern.png';
@@ -83,6 +84,16 @@ function pld_collections_objects_object_mapper($object_id) {
 	  );
       }
    }
+
+   if($obj_model == 'islandora:pageCModel') {
+    $img = array(
+      '#theme' => 'image',
+      '#path' => ($o && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $o['JPG']) ?
+        "$url/datastream/JPG/view" :
+       $no_thumb_path),
+    '#attributes' => array(),
+    );
+   }
   
   $img = drupal_render($img);
 
@@ -124,5 +135,19 @@ function pld_collections_preprocess_islandora_objects_subset(&$variables) {
 
 	$variables['content']['#objects'] = array_map('pld_collections_objects_object_mapper', $variables['content']['#objects']);
 
+}
+
+function pld_collections_menu_alter(&$menu) {
+   if(isset($menu['islandora/object/%islandora_object/pages'])) {
+   $menu['islandora/object/%islandora_object/pages']['page callback'] = 'pld_collections_islandora_book_pages_menu';
+  }
+}
+
+function pld_collections_islandora_book_pages_menu(AbstractObject $object) {
+  module_load_include('inc', 'islandora', 'includes/breadcrumb');
+  drupal_set_breadcrumb(islandora_get_breadcrumbs($object));
+  module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
+  $pages = islandora_paged_content_get_pages($object);
+  return theme('islandora_objects_subset', array('objects' => array_keys($pages)));
 }
 ?>
