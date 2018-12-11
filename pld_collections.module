@@ -95,7 +95,7 @@ function pld_collections_objects_object_mapper($object_id) {
     );
    }
 
-   if(isset($copyright)):
+   if($copyright != FALSE):
     $copyright_path = drupal_get_path('theme', 'pld') .'/img/image_under_copyright.png';
    $img = array(
     '#theme' => 'image',
