@@ -30,10 +30,10 @@ function pld_collections_objects_object_mapper($object_id) {
    $obj_models = $o->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
    $obj_model = $obj_models[0]['object']['value'];
     
-
+   $copyright = $o->getDatastream('COPYRIGHT');
 
    $no_thumb_path = drupal_get_path('theme', 'pld');
-   $no_thumb_path = $no_thumb_path .'/img/ppl-pattern.png';
+   $no_thumb_path = $no_thumb_path .'/img/no_image_available.png';
    
    $current_object = arg(2);
 
@@ -94,6 +94,15 @@ function pld_collections_objects_object_mapper($object_id) {
     '#attributes' => array(),
     );
    }
+
+   if(isset($copyright)):
+    $copyright_path = drupal_get_path('theme', 'pld') .'/img/image_under_copyright.png';
+   $img = array(
+    '#theme' => 'image',
+    '#path' => $copyright_path,
+    '#attributes' => array(),
+   );
+   endif;
   
   $img = drupal_render($img);
 
@@ -121,7 +130,6 @@ function pld_collections_objects_object_mapper($object_id) {
   	);
   	
   }
-
 
 }
 
