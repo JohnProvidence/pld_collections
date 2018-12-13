@@ -133,6 +133,12 @@ function pld_collections_objects_object_mapper($object_id) {
 
 }
 
+/**
+* Override islandora_objects_subset to add additional variables
+* 
+* @see template_preprocess_islandora_objects_subset()
+**/
+
 function pld_collections_preprocess_islandora_objects_subset(&$variables) {
 
 	$display = (empty($_GET['display'])) ? $variables['display'] : $_GET['display'];
@@ -158,4 +164,156 @@ function pld_collections_islandora_book_pages_menu(AbstractObject $object) {
   $pages = islandora_paged_content_get_pages($object);
   return theme('islandora_objects_subset', array('objects' => array_keys($pages)));
 }
+
+/**
+* Recently added collection objects block
+**/
+
+function pld_collections_block_info() {
+  $blocks['pld_recent_objects'] = array(
+    'info' => t('Prov Lib Digital Recently Added Objects'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+function pld_collections_block_view($delta = '') {
+  switch($delta) {
+    case 'pld_recent_objects':
+    if(user_access('access content')) {
+      $block['subject'] = 'Recently Added Objects';
+      $block['content'] = pld_collections_fetch_recent_objects();
+      return $block;
+    }
+  }
+}
+
+function pld_collections_fetch_recent_objects() {
+ 
+ $items = array();
+
+ module_load_include('inc', 'islandora', 'includes/datastream');
+ module_load_include('inc', 'islandora', 'includes/utilities');
+ module_load_include('inc', 'islandora', 'includes/metadata');
+ module_load_include('inc', 'islandora', 'includes/tuque');
+
+ $user = user_load(1);
+
+ $connection = islandora_get_tuque_connection($user);
+
+ $repository = $connection->repository;
+
+ $ri = $repository->ri;
+
+$query = <<<EOQ
+SELECT ?object ?created
+FROM <#ri>
+WHERE {
+  ?object <fedora-model:createdDate> ?created .
+  OPTIONAL {
+    ?object <fedora-model:hasModel> <info:fedora/islandora:collectionCModel> ;
+            <fedora-view:lastModifiedDate> ?probe
+  }
+  FILTER(!bound(?probe))
+}
+ORDER BY DESC(?created) LIMIT 50
+EOQ;
+
+ $results = $ri->sparqlQuery($query);
+ //var_dump($results);
+
+ foreach($results as $r) {
+  $pid = $r['object']['value'];
+  $object = islandora_object_load($pid);
+  $relationships = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+  $obj_model = $relationships[0]['object']['value'];
+  $parent = $object->getParents();
+  $parent_pid = $parent[0];
+  $parent_object = islandora_object_load($parent_pid);
+  $parent_label = $parent_object->label;
+  $parent_obj_model = $parent_object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+  $parent_obj_model = $parent_obj_model[0]['object']['value'];
+  $img = NULL;
+  $is_collection = NULL;
+
+  if($parent_obj_model != 'islandora:collectionCModel'):
+    $is_collection = FALSE;
+  else:
+    $is_collection = TRUE;
+  endif;
+
+ 
+switch($obj_model) {
+  case 'islandora:sp_basic_image':
+     $medium_size = $object->getDatastream('MEDIUM_SIZE');
+        if($medium_size != FALSE):
+          $img = '/islandora/object/'.$pid.'/datastream/MEDIUM_SIZE/view';
+        else:
+          continue;
+        endif;
+      break;
+
+    case 'islandora:compoundCModel':
+      $parts = islandora_compound_object_get_parts($object->id);
+      $obj_count = count($parts);
+
+      if($obj_count <= 0):
+        continue;
+      else:
+        $first_child = $parts[0];
+        $child_obj = islandora_object_load($first_child);
+        $img = '/islandora/object/'.$first_child.'/datastream/MEDIUM_SIZE/view';
+      endif;
+    break;
+
+   case 'islandora:bookCModel':
+     $medium_size = $object->getDatastream('MEDIUM_SIZE');
+        if($medium_size != FALSE):
+          $img = '/islandora/object/'.$pid.'/datastream/MEDIUM_SIZE/view';
+        else:
+          continue;
+        endif;
+    break;
+
+    case 'islandora:collectionCModel':
+      continue;
+    break;
+
+    case 'islandora:pageCModel':
+      continue;
+    break;
+
+ }
+    if($img != NULL) {
+       $items[] = array(
+        'pid' => $pid,
+        'label' => $object->label,
+        'parent_label' => $parent_object->label,
+        'parent_is_collection' => $is_collection,
+        'parent_pid' => $parent_pid,
+        'img' => $img,
+      );
+ 
+ }
+
+  }
+
+   if(!empty($items)):
+      return theme('pld_collections_fetch_recent_objects', array('items' => $items));
+    endif;
+}
+
+function pld_collections_theme() {
+  $base = array(
+    'path' => drupal_get_path('module', 'pld_collections').'/theme',
+  );
+  return array(
+    'pld_collections_fetch_recent_objects' => $base + array(
+      'template' => 'pld-recent-objects',
+      'variables' => array('items' => NULL,),
+    ),
+  );
+  }
+
+
 ?>
