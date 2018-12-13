@@ -231,8 +231,10 @@ EOQ;
   $parent_pid = $parent[0];
   $parent_object = islandora_object_load($parent_pid);
   $parent_label = $parent_object->label;
+  if($parent_object != NULL):
   $parent_obj_model = $parent_object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
   $parent_obj_model = $parent_obj_model[0]['object']['value'];
+  endif;
   $img = NULL;
   $is_collection = NULL;
 
@@ -284,7 +286,7 @@ switch($obj_model) {
     break;
 
  }
-    if($img != NULL) {
+    if($img != NULL && $parent_object != NULL) {
        $items[] = array(
         'pid' => $pid,
         'label' => $object->label,
