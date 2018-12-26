@@ -317,5 +317,18 @@ function pld_collections_theme() {
   );
   }
 
+  // Add bookmarks link to user page
+
+function pld_collections_menu() {
+  $items['user/%user/bookmarks'] = array(
+      'title' => 'My Bookmarks',
+      'page callback' => 'drupal_goto',
+      'page arguments' => array('islandora-bookmark'),
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_LOCAL_TASK,
+    );
+    return $items;
+}
+
 
 ?>
